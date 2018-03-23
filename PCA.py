@@ -1,5 +1,7 @@
 from load_compas_data		import load_compas_data
+from GetAccFair             import get_acc_fair
 
+from matplotlib				import pyplot as plt
 from numpy 					import argsort, average, cov, column_stack, dot
 from numpy.random 			import normal, randn, rand, uniform
 from numpy.linalg			import eig
@@ -18,7 +20,11 @@ def generate_data():
 
 # X, Y = generate_data()
 X, Y, x_control = load_compas_data()
-
+Y = [0 if y==-1 else y for y in Y]
+print X
+x_control = x_control.values()[0]                            #.values returns a list of list values
+print x_control
+split = 0.9
 N, num_features = X.shape
 sensitive_column = 0				#Define the sensitive column
 
@@ -27,16 +33,23 @@ eigenval, eigenvec = eig(covar)
 sorttosensattr = argsort(eigenvec[sensitive_column,:])
 X_norm = X - average(X, axis=0)
 
-# for i in range(1, num_features+1):
-# 	loc_eig = eigenvec[:,sorttosensattr[:i]]
-# 	X_transform = dot(X_norm,loc_eig)
+for i in range(1, num_features+1):
+	loc_eig = eigenvec[:,sorttosensattr[:i]]
+	X_transform = dot(X_norm,loc_eig)
+	X_train, Y_train = X_transform[:int(split*N)], Y[:int(split*N)]
+	X_test, Y_test = X_transform[int(split*N):], Y[int(split*N):]
+	acc, fair = get_acc_fair((X_train, Y_train), (X_test, Y_test), x_control[int(split*N):])
+	print acc, fair
+	
+	feat_acc_fair = (i, acc, fair)
+	plt.scatter(i, acc, color='r')
+	plt.scatter(i, fair, color='b')
 
-from sklearn.decomposition  import PCA
+X_train, Y_train = X[:int(split*N)], Y[:int(split*N)]
+X_test, Y_test = X[int(split*N):], Y[int(split*N):]
+print get_acc_fair((X_train, Y_train), (X_test, Y_test), x_control[int(split*N):])
 
-pca = PCA(n_components=num_features)
-X_trans = pca.fit_transform(X)
-print dot(X_norm, eigenvec)
-print X_trans
-import pdb
-pdb.set_trace()
+plt.legend(["Accuracy", "Fairness"])
+plt.show()
+plt.close()
 # TODO: Add default as well 
