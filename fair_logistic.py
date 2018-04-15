@@ -1,6 +1,8 @@
 import numpy as np
 import math
 import load_compass as data_loader
+import load_adult_data as adult_data_loader
+import load_synthetic_data as synthetic_data_generator
 
 alpha = 15.0		# alpha is the fairness multiplicative constant for y_bar
 beta = 15.0			# beta is the fairness multiplicative constant for y
@@ -9,7 +11,12 @@ training_iterations = 400
 np.set_printoptions(precision=5)
 def h(theta_x):
 	# Sigmoid of the value
-	return 1.0 / (1.0 + np.exp(-theta_x))
+	sigmoid = 1.0 / (1.0 + np.exp(-theta_x))
+	if sigmoid == 0.0:
+		sigmoid = 1e-100
+	if sigmoid == 1.0:
+		sigmoid = 9.99
+	return sigmoid
 
 def test_fair_logistic(X, Y, s_id, theta):
 	n, d = X.shape
@@ -195,18 +202,32 @@ def train_fair_logistic(X, Y, s_id, X_test, Y_test):
 	print alpha
 	return theta
 
+"""
 X, y, x_control = data_loader.load_compas_data()
-
-print X.shape
-# print X[0:4]
-print y.shape
-y[y==-1] = 0
-
+s_id = 4
 x_control = np.array(x_control['race']).reshape((len(x_control['race']), 1))
 print np.sum(y)
 print np.sum(x_control)
 print x_control.shape
-X_full = np.append(X, x_control, axis=1)
+X_full = X
+"""
+
+X, y, x_sensitive = adult_data_loader.load_adult_data()
+s_id = 9
+X, y, x_control = synthetic_data_generator.generate_synthetic_data(1,1000)
+s_id = 3
+# Add x_control and intercept to X
+# intercept = np.array([[1.0] for _ in range(X.shape[0])])
+intercept_and_x_control = np.array([[1.0, x] for x in x_control])
+print intercept_and_x_control.shape
+X_full = np.append(X, intercept_and_x_control, axis = 1)
+print X_full.shape
+# print X[0:4]
+print y.shape
+y[y==-1] = 0
+
+
+# s_id = 4
 
 indices = np.random.permutation(X_full.shape[0])
 split_id = int(indices.shape[0] * 0.9)
@@ -216,6 +237,6 @@ y_train = y[indices[:split_id]]
 X_test = X_full[indices[split_id:],:]
 y_test = y[indices[split_id:]]
 
-theta = train_fair_logistic(X_train, y_train, X_train.shape[1]-1, X_test, y_test)
-delta_y_bar_root, delta_y_root, accuracy = test_fair_logistic(X_test, y_test, X_test.shape[1]-1, theta)
+theta = train_fair_logistic(X_train, y_train, s_id, X_test, y_test)
+delta_y_bar_root, delta_y_root, accuracy = test_fair_logistic(X_test, y_test, s_id, theta)
 print theta
