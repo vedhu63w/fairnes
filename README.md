@@ -1,4 +1,4 @@
-# fairness
+# Fairness in Machine Learning
 Fairness in ML
 
 This contains the implementation of making Machine Leanring algorithm fair. There are two methods in the implementation. First method is fair-PCA which first applies
